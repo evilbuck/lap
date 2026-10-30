@@ -21,6 +21,8 @@ jobs:
       - name: Install checkout prerequisites
         run: pacman -Syu --noconfirm --needed git ca-certificates
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Install build and inspection tools
         shell: bash
         run: |
@@ -37,7 +39,7 @@ jobs:
           printf 'recipe_commit=%s\npackage_version=%s-%s\nworkflow_revision=%s\n' "$_commit" "$pkgver" "$pkgrel" "$GITHUB_SHA" | tee source-identity.txt
           if [[ "$GITHUB_REF" == refs/tags/* ]]; then
             [[ "$GITHUB_REF_NAME" == "v$pkgver" ]]
-            [[ "$GITHUB_SHA" == "$_commit" ]]
+            git merge-base --is-ancestor "$_commit" "$GITHUB_SHA"
           fi
           runuser -u builder -- makepkg --printsrcinfo > generated.SRCINFO
           diff -u .SRCINFO generated.SRCINFO

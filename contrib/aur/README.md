@@ -22,7 +22,15 @@ On 2026-10-12 a local `0.3.2-2` package was built from copied prepared sources u
 
 `.github/workflows/release-arch.yml` builds the recipe in an Arch container as a non-root user on pull requests that change packaging, on manual dispatch, and on `v*` tags. It compares generated `.SRCINFO` with the committed file, runs namcap, and inspects the package with pacman. It uploads source identity, SHA-256, and inspection logs, but withholds the binary package while the bundled model and FFmpeg distribution questions remain open. This validation does not publish to the AUR or attach an Arch package to a GitHub release.
 
-The package source is `_commit` in `PKGBUILD`, which can differ from the workflow commit on a pull request or manual run. On a release tag, the workflow requires both the tag version and tag commit to match the recipe before building. To prepare a later release, review its source and resource pins, update `pkgver`/`pkgrel` and `_commit`, regenerate `.SRCINFO` with `makepkg --printsrcinfo > .SRCINFO`, and test the new recipe. A green workflow and installed-app check are still required before offering an AUR package.
+The package source is the immutable `_commit` in `PKGBUILD`, not necessarily the workflow revision. On a release tag, the workflow requires the tag to equal `v$pkgver` and `_commit` to be an ancestor of the tagged revision. Checkout includes full history for that ancestry check; `source-identity.txt` records the source and workflow revisions separately. The recipe does not need to contain its own commit SHA.
+
+To prepare a later release:
+
+1. Finish and review the application source in commit A.
+2. In a later packaging commit B, set `_commit` to A, update `pkgver`/`pkgrel`, review resource pins and patches, and update the source archive checksum. Regenerate `.SRCINFO` with `makepkg --printsrcinfo > .SRCINFO` and test the recipe.
+3. Tag B as `v$pkgver`. The package builds A with the recipe's explicit patches; it does not claim to build the entire tree at B. Keep B packaging-only; if application code changes before tagging, select the new source revision and refresh its pin and checksum first.
+
+A green workflow and installed-app check are still required before offering an AUR package.
 
 Runtime `depends` were refined from `ldd` and namcap, not from the initial plan list alone. `openssl` is a direct `DT_NEEDED` entry and is not pulled in by `webkit2gtk-4.1`. `hicolor-icon-theme` is required for the installed hicolor icon. `glibc`, `glib2`, `libgcc`, and `libstdc++` are direct namcap dependencies. `libappindicator` stays even though it is not a `DT_NEEDED` entry: the tray icon dlopens it. `librsvg` stays because `gtk3` uses it for SVG icons and the parent plan requires it; namcap may still call it unused.
 
